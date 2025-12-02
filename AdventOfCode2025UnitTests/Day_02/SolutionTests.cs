@@ -10,25 +10,15 @@ public class SolutionTests
     {
         // Arrange
         var solution = new AdventOfCode2025.Day_02.Solution1();
-        string[] input = new string[]
-        {
-            "L68",
-            "L30",
-            "R48",
-            "L5",
-            "R60",
-            "L55",
-            "L1",
-            "L99",
-            "R14",
-            "L82"
-        };
+        string input =
+            new string(
+                "11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124");
 
         // Act
-        int result = solution.Solve(input);
+        long result = solution.Solve(input);
 
         // Assert
-        result.Should().Be(3);
+        result.Should().Be(1227775554);
     }
 
     [Fact]
@@ -39,9 +29,9 @@ public class SolutionTests
         // string[] input = File.ReadAllLines("AdventOfCode2025/Day_01/Input_01_1.txt");
 
         // Act
-        int result = solution.Start();
+        long result = solution.Start();
 
         // Assert
-        result.Should().Be(1076);
+        result.Should().Be(19219508902);
     }
 }

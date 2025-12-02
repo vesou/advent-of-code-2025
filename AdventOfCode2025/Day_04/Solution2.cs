@@ -1,4 +1,4 @@
-namespace AdventOfCode2025.Day_02;
+namespace AdventOfCode2025.Day_04;
 
 public class Solution2
 {

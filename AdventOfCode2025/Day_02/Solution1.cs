@@ -2,42 +2,50 @@ namespace AdventOfCode2025.Day_02;
 
 public class Solution1
 {
-    public string[] GetInput()
+    public string GetInput()
     {
-        return System.IO.File.ReadAllLines("Day_01/Input.txt");
+        return System.IO.File.ReadAllLines("Day_02/Input.txt").FirstOrDefault();
     }
 
-    public int Start()
+    public long Start()
     {
         var input = GetInput();
         return Solve(input);
     }
 
-    public int Solve(string[] input)
+    public long Solve(string input)
     {
-        int result = 0;
-        int currentPosition = 50;
-
-        foreach (var line in input)
+        long result = 0;
+        List<(long left, long right)> inputs = input.Split(',').Select(x => new ValueTuple<long, long>()
         {
-            char direction = line[0];
-            int value = int.Parse(line.Substring(1));
-
-            if (direction == 'L')
+            Item1 = long.Parse(x.Split('-')[0]),
+            Item2 = long.Parse(x.Split('-')[1])
+        }).ToList();
+        foreach (var (left, right) in inputs)
+        {
+            for (long i = left; i <= right; i++)
             {
-                currentPosition = (currentPosition - value) % 100;
-            }
-            else if (direction == 'R')
-            {
-                currentPosition = (currentPosition + value) % 100;
-            }
-
-            if (currentPosition == 0)
-            {
-                result++;
+                string s = i.ToString();
+                if(s.Length % 2 != 0) continue;
+                if (IsRepeating(s))
+                {
+                    result += i;
+                }
             }
         }
-
         return result;
+    }
+
+    private bool IsRepeating(string s)
+    {
+        int len = s.Length;
+        for (int i = 0; i < len / 2; i++)
+        {
+            if (s[i] != s[i + len / 2])
+            {
+                return false;
+            }
+        }
+        return true;
     }
 }

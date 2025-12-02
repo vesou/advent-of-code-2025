@@ -1,6 +1,6 @@
-namespace AdventOfCode2025.Day_02;
+namespace AdventOfCode2025.Day_04;
 
-public class Solution2
+public class Solution1
 {
     public string[] GetInput()
     {
