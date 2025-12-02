@@ -4,7 +4,7 @@ public class Solution1
 {
     public string[] GetInput()
     {
-        return System.IO.File.ReadAllLines("Day_02/Input.txt");
+        return System.IO.File.ReadAllLines("Day_04/Input.txt");
     }
 
     public int Start()

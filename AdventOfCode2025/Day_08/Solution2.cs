@@ -1,10 +1,10 @@
-namespace AdventOfCode2025.Day_03;
+namespace AdventOfCode2025.Day_08;
 
 public class Solution2
 {
     public string[] GetInput()
     {
-        return System.IO.File.ReadAllLines("Day_03/Input.txt");
+        return System.IO.File.ReadAllLines("Day_08/Input.txt");
     }
 
     public int Start()
@@ -16,7 +16,6 @@ public class Solution2
     public int Solve(string[] input)
     {
         int result = 0;
-
         return result;
     }
 }
