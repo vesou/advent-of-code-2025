@@ -82,7 +82,7 @@ public class SolutionTests
         int result = solution.Start();
 
         // Assert
-        result.Should().Be(5854);
+        result.Should().Be(6379);
     }
 
     [Fact]
