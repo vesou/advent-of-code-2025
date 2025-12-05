@@ -11,14 +11,24 @@ public class SolutionTests
         var solution = new AdventOfCode2025.Day_05.Solution1();
         string[] input =
         [
+            "3-5",
+            "10-14",
+            "16-20",
+            "12-18",
             "",
+            "1",
+            "5",
+            "8",
+            "11",
+            "17",
+            "32",
         ];
 
         // Act
         long result = solution.Solve(input);
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(3);
     }
 
     [Fact]
@@ -31,7 +41,7 @@ public class SolutionTests
         long result = solution.Start();
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(789);
     }
 
     [Fact]
@@ -41,14 +51,24 @@ public class SolutionTests
         var solution = new AdventOfCode2025.Day_05.Solution2();
         string[] input =
         [
+            "3-5",
+            "10-14",
+            "16-20",
+            "12-18",
             "",
+            "1",
+            "5",
+            "8",
+            "11",
+            "17",
+            "32",
         ];
 
         // Act
         long result = solution.Solve(input);
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(14);
     }
 
     [Fact]
@@ -61,6 +81,6 @@ public class SolutionTests
         long result = solution.Start();
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(343329651880509);
     }
 }
