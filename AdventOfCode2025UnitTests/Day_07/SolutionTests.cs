@@ -11,14 +11,29 @@ public class SolutionTests
         var solution = new AdventOfCode2025.Day_07.Solution1();
         string[] input =
         [
-            "",
+".......S.......",
+"...............",
+".......^.......",
+"...............",
+"......^.^......",
+"...............",
+".....^.^.^.....",
+"...............",
+"....^.^...^....",
+"...............",
+"...^.^...^.^...",
+"...............",
+"..^...^.....^..",
+"...............",
+".^.^.^.^.^...^.",
+"...............",
         ];
 
         // Act
         long result = solution.Solve(input);
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(21);
     }
 
     [Fact]
@@ -31,7 +46,7 @@ public class SolutionTests
         long result = solution.Start();
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(1573);
     }
 
     [Fact]
@@ -41,14 +56,29 @@ public class SolutionTests
         var solution = new AdventOfCode2025.Day_07.Solution2();
         string[] input =
         [
-            "",
+            ".......S.......",
+            "...............",
+            ".......^.......",
+            "...............",
+            "......^.^......",
+            "...............",
+            ".....^.^.^.....",
+            "...............",
+            "....^.^...^....",
+            "...............",
+            "...^.^...^.^...",
+            "...............",
+            "..^...^.....^..",
+            "...............",
+            ".^.^.^.^.^...^.",
+            "...............",
         ];
 
         // Act
         long result = solution.Solve(input);
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(40);
     }
 
     [Fact]
@@ -61,6 +91,6 @@ public class SolutionTests
         long result = solution.Start();
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(15093663987272);
     }
 }
