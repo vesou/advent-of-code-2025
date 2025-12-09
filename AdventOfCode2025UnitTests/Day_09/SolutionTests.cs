@@ -11,14 +11,21 @@ public class SolutionTests
         var solution = new AdventOfCode2025.Day_09.Solution1();
         string[] input =
         [
-            "",
+            "7,1",
+            "11,1",
+            "11,7",
+            "9,7",
+            "9,5",
+            "2,5",
+            "2,3",
+            "7,3"
         ];
 
         // Act
-        long result = solution.Solve(input);
+        var result = solution.Solve(input);
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(50);
     }
 
     [Fact]
@@ -28,7 +35,7 @@ public class SolutionTests
         var solution = new AdventOfCode2025.Day_09.Solution1();
 
         // Act
-        long result = solution.Start();
+        var result = solution.Start();
 
         // Assert
         result.Should().Be(0);
@@ -41,14 +48,21 @@ public class SolutionTests
         var solution = new AdventOfCode2025.Day_09.Solution2();
         string[] input =
         [
-            "",
+            "7,1",
+            "11,1",
+            "11,7",
+            "9,7",
+            "9,5",
+            "2,5",
+            "2,3",
+            "7,3"
         ];
 
         // Act
         long result = solution.Solve(input);
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(24);
     }
 
     [Fact]
