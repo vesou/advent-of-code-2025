@@ -38,7 +38,7 @@ public class SolutionTests
         var result = solution.Start();
 
         // Assert
-        result.Should().Be(4759420470);
+        result.Should().Be(4_759_420_470);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class SolutionTests
         ];
 
         // Act
-        long result = solution.Solve(input, 13);
+        long result = solution.Solve(input);
 
         // Assert
         result.Should().Be(24);
@@ -75,6 +75,6 @@ public class SolutionTests
         long result = solution.Start();
 
         // Assert
-        result.Should().Be(1551274270); // incorrect too small
+        result.Should().Be(1603439684);
     }
 }
