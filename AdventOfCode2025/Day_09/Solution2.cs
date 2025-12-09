@@ -13,35 +13,33 @@ public class Solution2
         return Solve(input);
     }
 
-    public long Solve(string[] input)
+    public long Solve(string[] input, int matrixSize = 100_002)
     {
         var result = 0;
-        var startingCoordinates = GetCoordinates(input);
-        startingCoordinates = FillInRectangle(startingCoordinates);
-        var distances = GenerateDistances(startingCoordinates).OrderByDescending(d => d.Item3).ToList();
+        (List<Coordinate> startingCoordinates, byte[][] matrix) = GetCoordinates(input, matrixSize);
+        FillInRectangle(startingCoordinates, matrix);
+        var distances = GenerateDistances(startingCoordinates, matrix).OrderByDescending(d => d.Item3).ToList();
 
 
         return distances.First().Item3;
     }
 
-    private List<Coordinate> FillInRectangle(List<Coordinate> startingCoordinates)
+    private void FillInRectangle(List<Coordinate> startingCoordinates, byte[][] matrix)
     {
         for (int i = 0; i < startingCoordinates.Count - 1; i++)
         {
             if (i == 0)
             {
-                ConnectCoordinates(startingCoordinates, startingCoordinates[i], startingCoordinates[i + 1]);
-                ConnectCoordinates(startingCoordinates, startingCoordinates[i], startingCoordinates[^1]);
+                ConnectCoordinates(matrix, startingCoordinates[i], startingCoordinates[i + 1]);
+                ConnectCoordinates(matrix, startingCoordinates[i], startingCoordinates[^1]);
                 continue;
             }
 
-            ConnectCoordinates(startingCoordinates, startingCoordinates[i], startingCoordinates[i + 1]);
+            ConnectCoordinates(matrix, startingCoordinates[i], startingCoordinates[i + 1]);
         }
-
-        return startingCoordinates;
     }
 
-    private void ConnectCoordinates(List<Coordinate> startingCoordinates, Coordinate firstCoordinate, Coordinate secondCoordinate)
+    private void ConnectCoordinates(byte[][] matrix, Coordinate firstCoordinate, Coordinate secondCoordinate)
     {
         var minX = Math.Min(firstCoordinate.X, secondCoordinate.X);
         var maxX = Math.Max(firstCoordinate.X, secondCoordinate.X);
@@ -51,28 +49,33 @@ public class Solution2
         for (int x = minX; x <= maxX; x++)
         for (int y = minY; y <= maxY; y++)
         {
-            var newCoordinate = new Coordinate(x, y, false);
-            if(newCoordinate.X == firstCoordinate.X && newCoordinate.Y == firstCoordinate.Y)
-                continue;
-            startingCoordinates.Add(newCoordinate);
+            if(matrix[y][x] == 1) continue;
+            matrix[y][x] = 2;
         }
     }
 
-    private List<Coordinate> GetCoordinates(string[] input)
+    private (List<Coordinate>, byte[][]) GetCoordinates(string[] input, int matrixSize)
     {
+        byte[][] matrix = new byte[matrixSize][];
         var coordinates = new List<Coordinate>();
+        for (int i = 0; i < matrix.Length; i++)
+        {
+            matrix[i] = new byte[matrixSize];
+        }
         foreach (var line in input)
         {
             var parts = line.Split(',');
             var x = int.Parse(parts[0]);
             var y = int.Parse(parts[1]);
+
+            matrix[y][x] = 1;
             coordinates.Add(new Coordinate(x, y));
         }
 
-        return coordinates;
+        return (coordinates, matrix);
     }
 
-    private List<(Coordinate, Coordinate, long)> GenerateDistances(List<Coordinate> startingCoordinates)
+    private List<(Coordinate, Coordinate, long)> GenerateDistances(List<Coordinate> startingCoordinates, byte[][] matrix)
     {
         var distances = new List<(Coordinate, Coordinate, long)>();
         foreach (var coordinate in startingCoordinates.Where(x => x.IsRed))
@@ -80,7 +83,8 @@ public class Solution2
         {
             if (coordinate == otherCoordinate) continue;
             if (AnotherXInsideArea(startingCoordinates, coordinate, otherCoordinate)) continue;
-            if (!AtLeast3Walls(startingCoordinates, coordinate, otherCoordinate)) continue;
+            if (!AtLeast3Walls(matrix, coordinate, otherCoordinate)) continue;
+            if (AnotherXInsideArea2(matrix, coordinate, otherCoordinate)) continue;
             var distance = coordinate.RectangleArea(otherCoordinate);
             distances.Add((coordinate, otherCoordinate, distance));
         }
@@ -95,7 +99,25 @@ public class Solution2
         return distances;
     }
 
-    private bool AtLeast3Walls(List<Coordinate> startingCoordinates, Coordinate coordinate, Coordinate otherCoordinate)
+    private bool AnotherXInsideArea2(byte[][] matrix, Coordinate coordinate, Coordinate otherCoordinate)
+    {
+        int minX = Math.Min(coordinate.X, otherCoordinate.X);
+        int maxX = Math.Max(coordinate.X, otherCoordinate.X);
+        int minY = Math.Min(coordinate.Y, otherCoordinate.Y);
+        int maxY = Math.Max(coordinate.Y, otherCoordinate.Y);
+        for (int x = minX + 1; x < maxX; x++)
+        {
+            for (int y = minY + 1; y < maxY; y++)
+            {
+                if (matrix[y][x] == 2)
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool AtLeast3Walls(byte[][] matrix, Coordinate coordinate, Coordinate otherCoordinate)
     {
         int minX = Math.Min(coordinate.X, otherCoordinate.X);
         int maxX = Math.Max(coordinate.X, otherCoordinate.X);
@@ -103,14 +125,14 @@ public class Solution2
         int maxY = Math.Max(coordinate.Y, otherCoordinate.Y);
 
         int wallCount = 0;
-        if(startingCoordinates.Any(c => (c.X == minX + 1 && c.Y == minY) || (c.X == maxX - 1 && c.Y == minY)))
+        if(matrix[minY][minX+1] != 0 || matrix[minY][maxX-1] != 0)
             wallCount++; // top horizontal
-        if(startingCoordinates.Any(c => (c.X == minX + 1 && c.Y == maxY) || (c.X == maxX - 1 && c.Y == maxY)))
+        if(matrix[maxY][minX+1] != 0 || matrix[maxY][maxX-1] != 0)
             wallCount++; // bottom horizontal
 
-        if(startingCoordinates.Any(c => (c.X == minX && c.Y == minY + 1) || (c.X == minX && c.Y == maxY - 1)))
+        if(matrix[minY+1][minX] != 0 || matrix[maxY -1][minX] != 0)
             wallCount++; // left vertical
-        if(startingCoordinates.Any(c => (c.X == maxX && c.Y == minY + 1) || (c.X == maxX && c.Y == maxY - 1)))
+        if(matrix[minY+1][maxX] != 0 || matrix[maxY -1][maxX] != 0)
             wallCount++; // right vertical
         return wallCount >= 3;
     }
@@ -119,7 +141,6 @@ public class Solution2
         Coordinate otherCoordinate)
     {
         return startingCoordinates.Any(c =>
-            !c.IsRed &&
             c.X > Math.Min(coordinate.X, otherCoordinate.X) && c.X < Math.Max(coordinate.X, otherCoordinate.X) &&
             c.Y > Math.Min(coordinate.Y, otherCoordinate.Y) && c.Y < Math.Max(coordinate.Y, otherCoordinate.Y));
     }
