@@ -1,3 +1,5 @@
+using Google.OrTools.LinearSolver;
+
 namespace AdventOfCode2025.Day_10;
 
 public class Solution2
@@ -21,192 +23,179 @@ public class Solution2
         {
             HashSet<string> memo = new HashSet<string>();
             memo.Add(ToKey(new int[item.Joltages.Count]));
-            result += CalculatePresses2(item.Joltages.ToArray(), item.ButtonWirings);
+            result += CalculatePresses3(item.Joltages.ToArray(), item.ButtonWirings);
         }
 
         return result;
     }
 
-    private long CalculatePresses2(int[] joltages, List<List<int>> possibleButtonPresses)
+    private long CalculatePresses3(int[] numbersToReach, List<List<int>> listOfLinkedIndexes)
     {
-        long numPresses = 0;
-        int[] previousJoltage = new int[joltages.Length];
-        List<(int[], int)> possibleSolutions = new List<(int[], int)>();
-        possibleSolutions.Add((previousJoltage, 0));
-        for (int joltageIndex = 0; joltageIndex < joltages.Length; joltageIndex++)
+        // Use Google OR-Tools to solve this as an Integer Linear Programming problem
+        // Objective: minimize sum of button presses
+        // Constraints: each counter must reach exactly its target value
+
+        Solver solver = Solver.CreateSolver("SCIP");
+        if (solver == null)
         {
-            List<(int[], int)> newSolutions = new List<(int[], int)>();
-            foreach ((int[] currentState, int numberOfPressesSoFar) in possibleSolutions)
+            Console.WriteLine("Could not create solver SCIP");
+            return -1;
+        }
+
+        int numButtons = listOfLinkedIndexes.Count;
+        int numCounters = numbersToReach.Length;
+
+        // Create variables: number of presses for each button
+        Variable[] presses = new Variable[numButtons];
+        for (int i = 0; i < numButtons; i++)
+        {
+            presses[i] = solver.MakeIntVar(0, 10000, $"button_{i}");
+        }
+
+        // Add constraints: each counter must reach its target value
+        for (int counter = 0; counter < numCounters; counter++)
+        {
+            LinearExpr constraint = new LinearExpr();
+
+            // Sum up contributions from all buttons that affect this counter
+            for (int btn = 0; btn < numButtons; btn++)
             {
-                if(currentState[joltageIndex] == joltages[joltageIndex])
+                if (listOfLinkedIndexes[btn].Contains(counter))
                 {
-                    newSolutions.Add((currentState, numberOfPressesSoFar));
+                    constraint += presses[btn];
+                }
+            }
+
+            // Constraint: this counter must equal its target
+            solver.Add(constraint == numbersToReach[counter]);
+        }
+
+        // Objective: minimize total button presses
+        LinearExpr objective = new LinearExpr();
+        foreach (var pressVar in presses)
+        {
+            objective += pressVar;
+        }
+        solver.Minimize(objective);
+
+        // Solve the problem
+        Solver.ResultStatus resultStatus = solver.Solve();
+
+        if (resultStatus == Solver.ResultStatus.OPTIMAL)
+        {
+            return (long)solver.Objective().Value();
+        }
+        else if (resultStatus == Solver.ResultStatus.FEASIBLE)
+        {
+            Console.WriteLine("Found feasible solution (not proven optimal)");
+            return (long)solver.Objective().Value();
+        }
+        else
+        {
+            Console.WriteLine($"Could not solve problem. Status: {resultStatus}");
+            return -1;
+        }
+    }
+
+    private long CalculateDistance(int[] current, int[] target)
+    {
+        long distance = 0;
+        for (int i = 0; i < current.Length; i++)
+        {
+            distance += target[i] - current[i];
+        }
+        return distance;
+    }
+
+    private long CalculatePresses4(int[] numbersToReach, List<List<int>> listOfLinkedIndexes)
+    {
+        // Greedy approach: work backwards, find buttons that affect fewest unfilled counters
+        int[] current = new int[numbersToReach.Length];
+        long totalPresses = 0;
+
+        // Keep working until we reach the goal
+        while (!current.SequenceEqual(numbersToReach))
+        {
+            // Find the best button to press
+            int bestButton = -1;
+            int bestPresses = int.MaxValue;
+            double bestScore = double.MinValue;
+
+            for (int buttonIdx = 0; buttonIdx < listOfLinkedIndexes.Count; buttonIdx++)
+            {
+                var buttonWiring = listOfLinkedIndexes[buttonIdx];
+
+                // Calculate how many times we can press this button
+                int maxPresses = int.MaxValue;
+                int affectsNeeded = 0;
+                int totalAffected = buttonWiring.Count;
+
+                foreach (var index in buttonWiring)
+                {
+                    int remaining = numbersToReach[index] - current[index];
+                    if (remaining > 0)
+                    {
+                        affectsNeeded++;
+                        if (remaining < maxPresses)
+                            maxPresses = remaining;
+                    }
+                    else if (remaining == 0)
+                    {
+                        maxPresses = 0;
+                        break;
+                    }
+                }
+
+                if (maxPresses <= 0)
                     continue;
-                }
 
-                var newSolutions2 = FindAllCombinationsThatAffectIndex(possibleButtonPresses, joltageIndex, currentState, joltages, numberOfPressesSoFar);
-                newSolutions2 = FilterThoseThatHaveTooMuchPower(newSolutions2, joltages);
+                // Score: prefer buttons that affect more needed counters and fewer total counters
+                // Also prefer to complete counters
+                double score = (double)affectsNeeded / totalAffected;
 
-                newSolutions.AddRange(newSolutions2);
-            }
-            newSolutions = DeDuplicate(newSolutions);
-            possibleSolutions = newSolutions;
-        }
-        numPresses = possibleSolutions.Min(x => x.Item2);
-        return numPresses;
-    }
-
-    // deduplicate newSolutions2 just based on key and take the smallest number of presses
-    private List<(int[], int)> DeDuplicate(List<(int[], int)> solutions)
-    {
-        Dictionary<string, int> deduplicated = new Dictionary<string, int>();
-        foreach (var (joltageArray, numberOfPresses) in solutions)
-        {
-            string key = ToKey(joltageArray);
-            if (!deduplicated.ContainsKey(key) || deduplicated[key] > numberOfPresses)
-            {
-                deduplicated[key] = numberOfPresses;
-            }
-        }
-
-        return deduplicated.Select(kv => (kv.Key.Split(",").Select(int.Parse).ToArray(), kv.Value)).ToList();
-    }
-
-    private List<(int[], int)> FilterThoseThatHaveTooMuchPower(List<(int[], int)> possibleButtonPresses, int[] joltages)
-    {
-        return possibleButtonPresses.Where(x => x.Item1.Zip(joltages, (a, b) => a <= b).All(b => b)).ToList();
-    }
-
-    private List<(int[], int)> FindAllCombinationsThatAffectIndex(List<List<int>> possibleButtonPresses, int joltageIndex, int[] startingJoltage, int[] goalJoltage, int numberOfPressesSoFar)
-    {
-        int startingValue = startingJoltage[joltageIndex];
-        int valueToReach = goalJoltage[joltageIndex];
-        var filteredButtons = possibleButtonPresses.Where(bw => bw.Contains(joltageIndex)).ToList();
-
-        if (filteredButtons.Count == 0)
-        {
-            return new List<(int[], int)>();
-        }
-
-        int needed = valueToReach - startingValue;
-        if (needed <= 0)
-        {
-            return new List<(int[], int)>();
-        }
-
-        List<(int[], int)> result = new List<(int[], int)>();
-        FindCombinationsRecursive(filteredButtons, needed, 0, startingJoltage.ToArray(), numberOfPressesSoFar, result, goalJoltage);
-
-        return result;
-    }
-
-    private void FindCombinationsRecursive(List<List<int>> filteredButtonSequences, int pressesNeeded, int buttonIndex, int[] currentJoltage, int numberOfPressesSoFar, List<(int[], int)> result, int[] goalJoltage)
-    {
-        if (pressesNeeded == 0)
-        {
-            result.Add((currentJoltage.ToArray(), numberOfPressesSoFar));
-            return;
-        }
-
-        if (buttonIndex >= filteredButtonSequences.Count)
-        {
-            return;
-        }
-
-        var currentButtons = filteredButtonSequences[buttonIndex];
-
-        // Try pressing this button 0 to pressesNeeded times
-        for (int pressCount = 0; pressCount <= pressesNeeded; pressCount++)
-        {
-            foreach (var index in currentButtons)
-            {
-                if(currentJoltage[index] + pressCount > goalJoltage[index])
+                // Bonus for completing a counter
+                bool completesCounter = false;
+                foreach (var index in buttonWiring)
                 {
-                    return;
-                }
-            }
-
-            int[] newJoltage = currentJoltage.ToArray();
-
-            // Apply the button presses
-            foreach (var index in currentButtons)
-            {
-                newJoltage[index]+=pressCount;
-            }
-
-
-            // Calculate how many presses we still need for the target index
-            int remainingPresses = pressesNeeded - pressCount;
-            //
-            // if(TooMuchPower(newJoltage, goalJoltage))
-            // {
-            //     return;
-            // }
-
-            // Recurse with the next button
-            FindCombinationsRecursive(filteredButtonSequences, remainingPresses, buttonIndex + 1, newJoltage, numberOfPressesSoFar + pressCount, result, goalJoltage);
-        }
-    }
-
-    private long CalculatePresses(int[] joltages, List<List<int>> itemButtonWirings, HashSet<string> previousMemo)
-    {
-        long numPresses = 0;
-
-        while (true)
-        {
-            numPresses++;
-            HashSet<string> newMemos = new HashSet<string>();
-            if(previousMemo.Count == 0)
-            {
-                throw new Exception("No more states to explore");
-            }
-            foreach (var buttonsToPress in itemButtonWirings)
-            {
-                var singleButtonMemos = new HashSet<string>();
-                foreach (var currentJoltage in previousMemo)
-                {
-                    int[] afterPressing = PressButton(currentJoltage, buttonsToPress);
-
-                    if (TooMuchPower(afterPressing, joltages))
+                    int remaining = numbersToReach[index] - current[index];
+                    if (remaining == maxPresses)
                     {
-                        continue;
-                    }
-
-                    singleButtonMemos.Add(ToKey(afterPressing));
-                    if (afterPressing[0] < joltages[0]) continue; // quick check
-                    if (afterPressing.SequenceEqual(joltages))
-                    {
-                        return numPresses;
+                        completesCounter = true;
+                        break;
                     }
                 }
 
-                newMemos.UnionWith(singleButtonMemos);
+                if (completesCounter)
+                    score += 10.0;
+
+                // Prefer pressing fewer times (tie breaker)
+                score -= maxPresses * 0.001;
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestButton = buttonIdx;
+                    bestPresses = maxPresses;
+                }
             }
 
-            previousMemo = newMemos;
-        }
-    }
+            if (bestButton == -1)
+            {
+                // No valid button found - shouldn't happen
+                return -1;
+            }
 
-    private bool TooMuchPower(int[] newJoltage, int[] goalJoaltage)
-    {
-        for (int i = 0; i < newJoltage.Length; i++)
-        {
-            if (newJoltage[i] > goalJoaltage[i])
-                return true;
-        }
-        return false;
-    }
-
-    private static int[] PressButton(string currentJoltage, List<int> itemButtonWiring)
-    {
-        int[] newJoltage = currentJoltage.Split(",").Select(int.Parse).ToArray();
-        foreach (var index in itemButtonWiring)
-        {
-            newJoltage[index]++;
+            // Press the best button
+            foreach (var index in listOfLinkedIndexes[bestButton])
+            {
+                current[index] += bestPresses;
+            }
+            totalPresses += bestPresses;
         }
 
-        return newJoltage;
+        return totalPresses;
     }
+
 
     private static string ToKey(int[] joltages)
     {

@@ -65,6 +65,6 @@ public class SolutionTests
         long result = solution.Start();
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(16613);
     }
 }
