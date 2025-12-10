@@ -42,23 +42,23 @@ public class Solution2
             return -1;
         }
 
-        int numButtons = listOfLinkedIndexes.Count;
-        int numCounters = numbersToReach.Length;
+        int numberOfButtons = listOfLinkedIndexes.Count;
+        int numberOfJoltages = numbersToReach.Length;
 
         // Create variables: number of presses for each button
-        Variable[] presses = new Variable[numButtons];
-        for (int i = 0; i < numButtons; i++)
+        Variable[] presses = new Variable[numberOfButtons];
+        for (int i = 0; i < numberOfButtons; i++)
         {
             presses[i] = solver.MakeIntVar(0, 10000, $"button_{i}");
         }
 
         // Add constraints: each counter must reach its target value
-        for (int counter = 0; counter < numCounters; counter++)
+        for (int counter = 0; counter < numberOfJoltages; counter++)
         {
             LinearExpr constraint = new LinearExpr();
 
             // Sum up contributions from all buttons that affect this counter
-            for (int btn = 0; btn < numButtons; btn++)
+            for (int btn = 0; btn < numberOfButtons; btn++)
             {
                 if (listOfLinkedIndexes[btn].Contains(counter))
                 {
@@ -96,106 +96,6 @@ public class Solution2
             return -1;
         }
     }
-
-    private long CalculateDistance(int[] current, int[] target)
-    {
-        long distance = 0;
-        for (int i = 0; i < current.Length; i++)
-        {
-            distance += target[i] - current[i];
-        }
-        return distance;
-    }
-
-    private long CalculatePresses4(int[] numbersToReach, List<List<int>> listOfLinkedIndexes)
-    {
-        // Greedy approach: work backwards, find buttons that affect fewest unfilled counters
-        int[] current = new int[numbersToReach.Length];
-        long totalPresses = 0;
-
-        // Keep working until we reach the goal
-        while (!current.SequenceEqual(numbersToReach))
-        {
-            // Find the best button to press
-            int bestButton = -1;
-            int bestPresses = int.MaxValue;
-            double bestScore = double.MinValue;
-
-            for (int buttonIdx = 0; buttonIdx < listOfLinkedIndexes.Count; buttonIdx++)
-            {
-                var buttonWiring = listOfLinkedIndexes[buttonIdx];
-
-                // Calculate how many times we can press this button
-                int maxPresses = int.MaxValue;
-                int affectsNeeded = 0;
-                int totalAffected = buttonWiring.Count;
-
-                foreach (var index in buttonWiring)
-                {
-                    int remaining = numbersToReach[index] - current[index];
-                    if (remaining > 0)
-                    {
-                        affectsNeeded++;
-                        if (remaining < maxPresses)
-                            maxPresses = remaining;
-                    }
-                    else if (remaining == 0)
-                    {
-                        maxPresses = 0;
-                        break;
-                    }
-                }
-
-                if (maxPresses <= 0)
-                    continue;
-
-                // Score: prefer buttons that affect more needed counters and fewer total counters
-                // Also prefer to complete counters
-                double score = (double)affectsNeeded / totalAffected;
-
-                // Bonus for completing a counter
-                bool completesCounter = false;
-                foreach (var index in buttonWiring)
-                {
-                    int remaining = numbersToReach[index] - current[index];
-                    if (remaining == maxPresses)
-                    {
-                        completesCounter = true;
-                        break;
-                    }
-                }
-
-                if (completesCounter)
-                    score += 10.0;
-
-                // Prefer pressing fewer times (tie breaker)
-                score -= maxPresses * 0.001;
-
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    bestButton = buttonIdx;
-                    bestPresses = maxPresses;
-                }
-            }
-
-            if (bestButton == -1)
-            {
-                // No valid button found - shouldn't happen
-                return -1;
-            }
-
-            // Press the best button
-            foreach (var index in listOfLinkedIndexes[bestButton])
-            {
-                current[index] += bestPresses;
-            }
-            totalPresses += bestPresses;
-        }
-
-        return totalPresses;
-    }
-
 
     private static string ToKey(int[] joltages)
     {

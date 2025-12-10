@@ -80,3 +80,79 @@ Configuring the third machine's counters requires a minimum of 11 button presses
 So, the fewest button presses required to correctly configure the joltage level counters on all of the machines is 10 + 12 + 11 = 33.
 
 Analyze each machine's joltage requirements and button wiring schematics. What is the fewest button presses required to correctly configure the joltage level counters on all of the machines?
+
+---
+
+## Solution Approach: Using SCIP for Integer Linear Programming
+
+### Problem Classification
+
+Part Two of this problem is a classic **Integer Linear Programming (ILP)** problem. Here's why:
+
+- **Decision Variables:** How many times to press each button (must be non-negative integers)
+- **Constraints:** Each counter must reach exactly its target joltage value
+- **Objective Function:** Minimize the total number of button presses
+- **Linear Relationships:** Each button press adds 1 to specific counters (linear effect)
+
+### Why Use SCIP?
+
+**SCIP (Solving Constraint Integer Programs)** is an open-source solver specifically designed for mixed integer programming problems. For this puzzle, brute-force approaches would be computationally infeasible:
+
+- If you have 6 buttons and need to reach values up to 100, there are potentially millions of combinations to try
+- SCIP uses sophisticated algorithms (branch-and-bound, cutting planes, presolving) to find optimal solutions efficiently
+- It's part of Google OR-Tools library, making it accessible in C#, Python, and Java
+
+### Mathematical Formulation
+
+For a machine with `n` buttons and `m` counters:
+
+**Variables:**
+- Let `x[i]` = number of times button `i` is pressed (where i = 0 to n-1)
+
+**Constraints:**
+- For each counter `j`, the sum of presses from buttons that affect it must equal the target:
+  ```
+  Σ(x[i] for all buttons i that affect counter j) = target[j]
+  ```
+
+**Objective:**
+- Minimize: `Σ(x[i])` - the total number of button presses
+
+**Example:** First machine `{3,5,4,7}` with buttons `(3) (1,3) (2) (2,3) (0,2) (0,1)`:
+
+```
+Counter 0: x[5] = 3                    (only button (0,1) affects counter 0)
+Counter 1: x[1] + x[5] = 5             (buttons (1,3) and (0,1) affect counter 1)
+Counter 2: x[2] + x[3] + x[4] = 4      (buttons (2), (2,3), (0,2) affect counter 2)
+Counter 3: x[0] + x[1] + x[3] = 7      (buttons (3), (1,3), (2,3) affect counter 3)
+
+Minimize: x[0] + x[1] + x[2] + x[3] + x[4] + x[5]
+```
+
+SCIP solves this system and finds that the minimum is **10 presses**.
+
+### Implementation Details
+
+The solution uses Google OR-Tools with the SCIP solver:
+
+1. **Create Integer Variables:** One for each button, ranging from 0 to 10,000
+2. **Add Constraints:** For each counter, create an equation ensuring the sum of relevant button presses equals the target
+3. **Set Objective:** Minimize the sum of all button press variables
+4. **Solve:** SCIP finds the optimal solution (or determines if none exists)
+
+### Why This Works
+
+- **Guaranteed Optimality:** SCIP proves the solution is minimal (not just a good guess)
+- **Handles Complexity:** Works even when counters are affected by multiple overlapping buttons
+- **Efficient:** Solves in milliseconds what would take hours with brute force
+- **Robust:** Returns -1 if the problem has no solution (constraints are impossible to satisfy)
+
+### Alternative Solvers
+
+Other suitable solvers for this problem:
+- **CBC** (COIN-OR Branch and Cut) - Another open-source ILP solver
+- **CP-SAT** (Google's Constraint Programming solver) - Often faster for discrete optimization
+- **Gurobi/CPLEX** - Commercial solvers with superior performance for large-scale problems
+
+For this Advent of Code problem, SCIP is an excellent choice: free, open-source, and performant enough for the input sizes involved.
+
