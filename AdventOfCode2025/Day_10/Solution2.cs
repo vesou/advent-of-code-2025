@@ -22,7 +22,62 @@ public class Solution2
             HashSet<string> memo = new HashSet<string>();
             memo.Add(ToKey(new int[item.Joltages.Count]));
             result += CalculatePresses(item.Joltages.ToArray(), item.ButtonWirings, memo);
+            result += CalculatePresses2(item.Joltages.ToArray(), item.ButtonWirings);
         }
+
+        return result;
+    }
+
+    private long CalculatePresses2(int[] joltages, List<List<int>> possibleButtonPresses)
+    {
+        long numPresses = 0;
+        int[] previousJoltage = new int[joltages.Length];
+        for (int joltageIndex = 0; joltageIndex < joltages.Length; joltageIndex++)
+        {
+            List<(List<int>, int[])> filteredButtonWirings = FindAllCombinationsThatAffectIndex(possibleButtonPresses, joltageIndex, joltages[joltageIndex], previousJoltage);
+        }
+
+        while (true)
+        {
+            numPresses++;
+            HashSet<string> newMemos = new HashSet<string>();
+            if(previousMemo.Count == 0)
+            {
+                throw new Exception("No more states to explore");
+            }
+            foreach (var buttonsToPress in possibleButtonPresses)
+            {
+                var singleButtonMemos = new HashSet<string>();
+                foreach (var currentJoltage in previousMemo)
+                {
+                    int[] afterPressing = PressButton(currentJoltage, buttonsToPress);
+
+                    if (TooMuchPower(afterPressing, joltages))
+                    {
+                        continue;
+                    }
+
+                    singleButtonMemos.Add(ToKey(afterPressing));
+                    if (afterPressing[0] < joltages[0]) continue; // quick check
+                    if (afterPressing.SequenceEqual(joltages))
+                    {
+                        return numPresses;
+                    }
+                }
+
+                newMemos.UnionWith(singleButtonMemos);
+            }
+
+            previousMemo = newMemos;
+        }
+    }
+
+    private List<(List<int>, int[])> FindAllCombinationsThatAffectIndex(List<List<int>> possibleButtonPresses, int joltageIndex, int valueToReach, int[] startingJoltage)
+    {
+        var result = new List<(List<int>, int[])>();
+        int startingValue = startingJoltage[joltageIndex];
+        var filteredButtons = possibleButtonPresses.Where(bw => bw.Contains(joltageIndex)).ToList();
+
 
         return result;
     }
