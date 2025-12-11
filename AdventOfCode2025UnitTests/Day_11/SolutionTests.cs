@@ -40,7 +40,7 @@ public class SolutionTests
         long result = solution.Start();
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(658);
     }
 
     [Fact]
@@ -50,23 +50,26 @@ public class SolutionTests
         var solution = new AdventOfCode2025.Day_11.Solution2();
         string[] input =
         [
-            "aaa: you hhh",
-            "you: bbb ccc",
-            "bbb: ddd eee",
-            "ccc: ddd eee fff",
-            "ddd: ggg",
-            "eee: out",
-            "fff: out",
+            "svr: aaa bbb",
+            "aaa: fft",
+            "fft: ccc",
+            "bbb: tty",
+            "tty: ccc",
+            "ccc: ddd eee",
+            "ddd: hub",
+            "hub: fff",
+            "eee: dac",
+            "dac: fff",
+            "fff: ggg hhh",
             "ggg: out",
-            "hhh: ccc fff iii",
-            "iii: out"
+            "hhh: out"
         ];
 
         // Act
         long result = solution.Solve(input);
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(2);
     }
 
     [Fact]
