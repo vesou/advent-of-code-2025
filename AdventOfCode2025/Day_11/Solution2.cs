@@ -15,7 +15,6 @@ public class Solution2
 
     public int Solve(string[] input)
     {
-        int result = 0;
         string startingPoint = "svr";
         string point1 = "dac";
         string point2 = "fft";
@@ -29,30 +28,33 @@ public class Solution2
             graph[node] = neighbors.Select(x => x.Trim()).ToList();
         }
 
-        // Each queue item now includes the path taken so far to detect cycles
-        var queue = new Queue<(string currentNode,HashSet<string> visitedNodes)>();
+        int result = 0;
+        var visited = new HashSet<string>();
 
-        queue.Enqueue((startingPoint, [startingPoint]));
-
-        while (queue.Count > 0)
+        void DFS(string currentNode)
         {
-            var (currentNode, pathVisited) = queue.Dequeue();
             if (currentNode == target)
             {
-                if (pathVisited.Contains(point1) && pathVisited.Contains(point2))
+                if (visited.Contains(point1) && visited.Contains(point2))
                 {
                     result++;
                 }
-                continue;
+                return;
             }
 
             foreach (var neighbor in graph[currentNode])
             {
-                if (pathVisited.Contains(neighbor)) continue;
-                var newPathVisited = new HashSet<string>(pathVisited) { neighbor };
-                queue.Enqueue((neighbor, newPathVisited));
+                if (visited.Contains(neighbor)) continue;
+
+                visited.Add(neighbor);
+                DFS(neighbor);
+                visited.Remove(neighbor);
             }
         }
+
+        visited.Add(startingPoint);
+        DFS(startingPoint);
+
         return result;
     }
 }
