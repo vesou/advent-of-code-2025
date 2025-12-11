@@ -31,13 +31,11 @@ public class Solution2
         var queue = new Queue<(string node, bool visited1, bool visited2)>();
 
         queue.Enqueue((startingPoint, false, false));
-        //visited.Add(startingPoint);
         while (queue.Count > 0)
         {
             var (currentNode, visited1, visited2) = queue.Dequeue();
             if (currentNode == target)
             {
-                // result = depth;
                 if (visited1 && visited2)
                 {
                     result++;
