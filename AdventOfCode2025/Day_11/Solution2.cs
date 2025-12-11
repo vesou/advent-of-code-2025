@@ -28,33 +28,62 @@ public class Solution2
             graph[node] = neighbors.Select(x => x.Trim()).ToList();
         }
 
-        int result = 0;
-        var visited = new HashSet<string>();
+        // Count paths using dynamic programming approach
+        // We need paths that go through both point1 and point2
+        // Two possible orderings: start -> point1 -> point2 -> target
+        //                      or: start -> point2 -> point1 -> target
 
-        void DFS(string currentNode)
+        int CountPaths(string from, string to, HashSet<string> forbidden)
         {
-            if (currentNode == target)
+            int count = 0;
+            var visited = new HashSet<string>();
+
+            void DFS(string currentNode)
             {
-                if (visited.Contains(point1) && visited.Contains(point2))
+                if (currentNode == to)
                 {
-                    result++;
+                    count++;
+                    return;
                 }
-                return;
+
+                foreach (var neighbor in graph[currentNode])
+                {
+                    if (visited.Contains(neighbor) || forbidden.Contains(neighbor))
+                        continue;
+
+                    visited.Add(neighbor);
+                    DFS(neighbor);
+                    visited.Remove(neighbor);
+                }
             }
 
-            foreach (var neighbor in graph[currentNode])
-            {
-                if (visited.Contains(neighbor)) continue;
-
-                visited.Add(neighbor);
-                DFS(neighbor);
-                visited.Remove(neighbor);
-            }
+            visited.Add(from);
+            DFS(from);
+            return count;
         }
 
-        visited.Add(startingPoint);
-        DFS(startingPoint);
+        // Path 1: start -> point1 -> point2 -> target
+        var forbiddenForStartToPoint1 = new HashSet<string> { point2, target };
+        var forbiddenForPoint1ToPoint2 = new HashSet<string> { target };
+        var forbiddenForPoint2ToTarget = new HashSet<string>();
 
-        return result;
+        int pathsStartToPoint1 = CountPaths(startingPoint, point1, forbiddenForStartToPoint1);
+        int pathsPoint1ToPoint2 = CountPaths(point1, point2, forbiddenForPoint1ToPoint2);
+        int pathsPoint2ToTarget = CountPaths(point2, target, forbiddenForPoint2ToTarget);
+
+        int ordering1 = pathsStartToPoint1 * pathsPoint1ToPoint2 * pathsPoint2ToTarget;
+
+        // Path 2: start -> point2 -> point1 -> target
+        var forbiddenForStartToPoint2 = new HashSet<string> { point1, target };
+        var forbiddenForPoint2ToPoint1 = new HashSet<string> { target };
+        var forbiddenForPoint1ToTarget = new HashSet<string>();
+
+        int pathsStartToPoint2 = CountPaths(startingPoint, point2, forbiddenForStartToPoint2);
+        int pathsPoint2ToPoint1 = CountPaths(point2, point1, forbiddenForPoint2ToPoint1);
+        int pathsPoint1ToTarget = CountPaths(point1, target, forbiddenForPoint1ToTarget);
+
+        int ordering2 = pathsStartToPoint2 * pathsPoint2ToPoint1 * pathsPoint1ToTarget;
+
+        return ordering1 + ordering2;
     }
 }
