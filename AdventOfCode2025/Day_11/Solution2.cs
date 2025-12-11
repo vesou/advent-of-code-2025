@@ -28,34 +28,29 @@ public class Solution2
             var neighbors = parts[1].Split(' ').ToList();
             graph[node] = neighbors.Select(x => x.Trim()).ToList();
         }
-        var queue = new Queue<(string node, bool visited1, bool visited2)>();
 
-        queue.Enqueue((startingPoint, false, false));
+        // Each queue item now includes the path taken so far to detect cycles
+        var queue = new Queue<(string currentNode,HashSet<string> visitedNodes)>();
+
+        queue.Enqueue((startingPoint, [startingPoint]));
+
         while (queue.Count > 0)
         {
-            var (currentNode, visited1, visited2) = queue.Dequeue();
+            var (currentNode, pathVisited) = queue.Dequeue();
             if (currentNode == target)
             {
-                if (visited1 && visited2)
+                if (pathVisited.Contains(point1) && pathVisited.Contains(point2))
                 {
                     result++;
                 }
-
                 continue;
-            }
-
-            if (currentNode == point1)
-            {
-                visited1 = true;
-            }
-            else if (currentNode == point2)
-            {
-                visited2 = true;
             }
 
             foreach (var neighbor in graph[currentNode])
             {
-                queue.Enqueue((neighbor, visited1, visited2));
+                if (pathVisited.Contains(neighbor)) continue;
+                var newPathVisited = new HashSet<string>(pathVisited) { neighbor };
+                queue.Enqueue((neighbor, newPathVisited));
             }
         }
         return result;
