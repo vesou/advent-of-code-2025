@@ -21,7 +21,6 @@ public class Solution2
         string point2 = "fft";
         string target = "out";
         var graph = new Dictionary<string, List<string>>();
-        var allPaths = new List<string>();
         foreach (var line in input)
         {
             var parts = line.Split(": ");
@@ -29,13 +28,13 @@ public class Solution2
             var neighbors = parts[1].Split(' ').ToList();
             graph[node] = neighbors.Select(x => x.Trim()).ToList();
         }
-        var queue = new Queue<(string node, int depth, bool visited1, bool visited2)>();
+        var queue = new Queue<(string node, bool visited1, bool visited2)>();
 
-        queue.Enqueue((startingPoint, 0, false, false));
+        queue.Enqueue((startingPoint, false, false));
         //visited.Add(startingPoint);
         while (queue.Count > 0)
         {
-            var (currentNode, depth, visited1, visited2) = queue.Dequeue();
+            var (currentNode, visited1, visited2) = queue.Dequeue();
             if (currentNode == target)
             {
                 // result = depth;
@@ -51,18 +50,14 @@ public class Solution2
             {
                 visited1 = true;
             }
-            if (currentNode == point2)
+            else if (currentNode == point2)
             {
                 visited2 = true;
             }
 
             foreach (var neighbor in graph[currentNode])
             {
-                // if (!visited.Contains(neighbor))
-                // {
-                //     visited.Add(neighbor);
-                queue.Enqueue((neighbor, depth + 1, visited1, visited2));
-                // }
+                queue.Enqueue((neighbor, visited1, visited2));
             }
         }
         return result;
