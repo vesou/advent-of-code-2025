@@ -2,24 +2,27 @@ namespace AdventOfCode2025.Day_11;
 
 public class Solution2
 {
+    Dictionary<string, List<string>> graph = new();
+    Dictionary<(string, bool, bool), long> memo = new();
+    string point1 = "dac";
+    string point2 = "fft";
+    string target = "out";
+
     public string[] GetInput()
     {
         return System.IO.File.ReadAllLines("Day_11/Input.txt");
     }
 
-    public int Start()
+    public long Start()
     {
         var input = GetInput();
         return Solve(input);
     }
 
-    public int Solve(string[] input)
+    public long Solve(string[] input)
     {
         string startingPoint = "svr";
-        string point1 = "dac";
-        string point2 = "fft";
-        string target = "out";
-        var graph = new Dictionary<string, List<string>>();
+
         foreach (var line in input)
         {
             var parts = line.Split(": ");
@@ -28,62 +31,36 @@ public class Solution2
             graph[node] = neighbors.Select(x => x.Trim()).ToList();
         }
 
-        // Count paths using dynamic programming approach
-        // We need paths that go through both point1 and point2
-        // Two possible orderings: start -> point1 -> point2 -> target
-        //                      or: start -> point2 -> point1 -> target
+        return DFS(startingPoint, false, false);
+    }
 
-        int CountPaths(string from, string to, HashSet<string> forbidden)
+    long DFS(string currentNode, bool visited1, bool visited2)
+    {
+        long result = 0;
+
+        if (currentNode == target)
         {
-            int count = 0;
-            var visited = new HashSet<string>();
-
-            void DFS(string currentNode)
+            if(visited1 && visited2)
             {
-                if (currentNode == to)
-                {
-                    count++;
-                    return;
-                }
-
-                foreach (var neighbor in graph[currentNode])
-                {
-                    if (visited.Contains(neighbor) || forbidden.Contains(neighbor))
-                        continue;
-
-                    visited.Add(neighbor);
-                    DFS(neighbor);
-                    visited.Remove(neighbor);
-                }
+                return 1;
             }
-
-            visited.Add(from);
-            DFS(from);
-            return count;
+            return 0;
         }
 
-        // Path 1: start -> point1 -> point2 -> target
-        var forbiddenForStartToPoint1 = new HashSet<string> { point2, target };
-        var forbiddenForPoint1ToPoint2 = new HashSet<string> { target };
-        var forbiddenForPoint2ToTarget = new HashSet<string>();
+        visited1 |= currentNode == point1;
+        visited2 |= currentNode == point2;
 
-        int pathsStartToPoint1 = CountPaths(startingPoint, point1, forbiddenForStartToPoint1);
-        int pathsPoint1ToPoint2 = CountPaths(point1, point2, forbiddenForPoint1ToPoint2);
-        int pathsPoint2ToTarget = CountPaths(point2, target, forbiddenForPoint2ToTarget);
+        if (memo.ContainsKey((currentNode, visited1, visited2)))
+        {
+            return memo[(currentNode, visited1, visited2)];
+        }
 
-        int ordering1 = pathsStartToPoint1 * pathsPoint1ToPoint2 * pathsPoint2ToTarget;
+        foreach (var neighbor in graph[currentNode])
+        {
+            result += DFS(neighbor, visited1, visited2);
+        }
 
-        // Path 2: start -> point2 -> point1 -> target
-        var forbiddenForStartToPoint2 = new HashSet<string> { point1, target };
-        var forbiddenForPoint2ToPoint1 = new HashSet<string> { target };
-        var forbiddenForPoint1ToTarget = new HashSet<string>();
-
-        int pathsStartToPoint2 = CountPaths(startingPoint, point2, forbiddenForStartToPoint2);
-        int pathsPoint2ToPoint1 = CountPaths(point2, point1, forbiddenForPoint2ToPoint1);
-        int pathsPoint1ToTarget = CountPaths(point1, target, forbiddenForPoint1ToTarget);
-
-        int ordering2 = pathsStartToPoint2 * pathsPoint2ToPoint1 * pathsPoint1ToTarget;
-
-        return ordering1 + ordering2;
+        memo[(currentNode, visited1, visited2)] = result;
+        return result;
     }
 }

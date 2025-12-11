@@ -82,6 +82,6 @@ public class SolutionTests
         long result = solution.Start();
 
         // Assert
-        result.Should().Be(0);
+        result.Should().Be(371113003846800);
     }
 }
