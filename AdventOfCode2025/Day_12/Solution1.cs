@@ -1,12 +1,7 @@
-using System.Collections;
-
 namespace AdventOfCode2025.Day_12;
 
 public class Solution1
 {
-    private static int patternArea = 9;
-    private static int patternWidth = 3;
-    private static int patternHeight = 3;
 
     public string[] GetInput()
     {
@@ -26,33 +21,63 @@ public class Solution1
         var grids = ParseGrids(input);
         foreach (var (width, height, patternRequirementCount) in grids)
         {
-            var totalRequired = patternRequirementCount.Sum();
             var gridArea = width * height;
+            var totalPatternCount = patternRequirementCount.Sum();
 
-            if (gridArea > totalRequired * patternArea)
+            // Optimization: if grid has more space than total patterns * 9 (bounding box),
+            // we're guaranteed to fit them regardless of arrangement (only valid at start with empty grid)
+            if (gridArea > totalPatternCount * 9)
             {
-                // we have more space than needed
                 result++;
                 continue;
             }
 
-            // More complex fitting logic
-            var grid = new BitArray[width];
-            for (var c = 0; c < width; c++) grid[c] = new BitArray(height);
-            result += FitPatternsToGrid(grid, patterns, patternRequirementCount) ? 1 : 0;
+            // Calculate total filled cells needed based on actual pattern sizes
+            var totalFilledCellsNeeded = 0;
+            for (var i = 0; i < patternRequirementCount.Length; i++)
+            {
+                if (patternRequirementCount[i] > 0 && i < patterns.Count)
+                {
+                    var filledCellsInPattern = patterns[i].ShapeOrientations[0].FilledCells.Count;
+                    totalFilledCellsNeeded += patternRequirementCount[i] * filledCellsInPattern;
+                }
+            }
+
+            // If we don't have enough space for the filled cells, skip immediately
+            if (gridArea < totalFilledCellsNeeded)
+            {
+                continue;
+            }
+
+            // Use backtracking to verify the fit
+            var filledCells = new HashSet<(int x, int y)>();
+            result += FitPatternsToGrid(filledCells, width, height, patterns, patternRequirementCount) ? 1 : 0;
         }
 
         return result;
     }
 
 
-    private bool FitPatternsToGrid(BitArray[] grid, List<PatternGroup> patterns, int[] patternRequirementCount)
+    private bool FitPatternsToGrid(HashSet<(int x, int y)> filledCells, int gridWidth, int gridHeight,
+        List<PatternGroup> patterns, int[] patternRequirementCount)
     {
         if (patternRequirementCount.All(c => c == 0))
             return true;
 
-        var gridWidth = grid.Length;
-        var gridHeight = grid[0].Length;
+        // Early pruning: check if remaining space can fit remaining patterns
+        var remainingFilledCellsNeeded = 0;
+        for (var i = 0; i < patternRequirementCount.Length; i++)
+        {
+            if (patternRequirementCount[i] > 0 && i < patterns.Count)
+            {
+                var filledCellsInPattern = patterns[i].ShapeOrientations[0].FilledCells.Count;
+                remainingFilledCellsNeeded += patternRequirementCount[i] * filledCellsInPattern;
+            }
+        }
+
+        var availableSpace = (gridWidth * gridHeight) - filledCells.Count;
+        if (availableSpace < remainingFilledCellsNeeded)
+            return false;
 
         // Find first pattern that still needs to be placed
         var patternIndex = -1;
@@ -70,47 +95,90 @@ public class Solution1
 
         var patternGroup = patterns[patternIndex];
 
-        // Try placing this pattern at every position in the grid
-        for (var y = 0; y < gridHeight; y++)
+        // Optimization: only try positions adjacent to already placed patterns, or (0,0) if grid is empty
+        var positionsToTry = new HashSet<(int x, int y)>();
+
+        if (filledCells.Count == 0)
         {
-            for (var x = 0; x < gridWidth; x++)
+            // Empty grid - only try top-left corner
+            positionsToTry.Add((0, 0));
+        }
+        else
+        {
+            // Try positions adjacent to filled cells (including diagonals)
+            foreach (var (fx, fy) in filledCells)
             {
-                // Try all orientations of this pattern
-                foreach (var shape in patternGroup.ShapeOrientations)
+                for (var dy = -1; dy <= 1; dy++)
                 {
-                    if (!shape.Fits(grid, x, y))
-                        continue;
-
-                    // Place the pattern
-                    shape.Place(grid, x, y);
-                    patternRequirementCount[patternIndex]--;
-
-                    // Recursively try to place remaining patterns
-                    if (FitPatternsToGrid(grid, patterns, patternRequirementCount))
-                        return true;
-
-                    // Backtrack: remove the pattern
-                    RemovePattern(grid, shape, x, y);
-                    patternRequirementCount[patternIndex]++;
+                    for (var dx = -1; dx <= 1; dx++)
+                    {
+                        var nx = fx + dx;
+                        var ny = fy + dy;
+                        if (nx >= 0 && nx < gridWidth && ny >= 0 && ny < gridHeight && !filledCells.Contains((nx, ny)))
+                        {
+                            positionsToTry.Add((nx, ny));
+                        }
+                    }
                 }
+            }
+        }
+
+        // Try placing this pattern at candidate positions
+        foreach (var (x, y) in positionsToTry)
+        {
+            // Try all orientations of this pattern
+            foreach (var shape in patternGroup.ShapeOrientations)
+            {
+                if (!CanPlaceShape(filledCells, shape, x, y, gridWidth, gridHeight))
+                    continue;
+
+                // Place the pattern
+                PlaceShape(filledCells, shape, x, y);
+                patternRequirementCount[patternIndex]--;
+
+                // Recursively try to place remaining patterns
+                if (FitPatternsToGrid(filledCells, gridWidth, gridHeight, patterns, patternRequirementCount))
+                    return true;
+
+                // Backtrack: remove the pattern
+                RemoveShape(filledCells, shape, x, y);
+                patternRequirementCount[patternIndex]++;
             }
         }
 
         return false;
     }
 
-    private void RemovePattern(BitArray[] grid, Shape shape, int startX, int startY)
+    private bool CanPlaceShape(HashSet<(int x, int y)> filledCells, Shape shape, int startX, int startY,
+        int gridWidth, int gridHeight)
     {
-        for (var r = 0; r < patternHeight; r++)
+        foreach (var (dx, dy) in shape.FilledCells)
         {
-            for (var c = 0; c < patternWidth; c++)
-            {
-                var gridX = startX + c;
-                var gridY = startY + r;
-                var patternIndex = r * patternWidth + c;
-                if (shape.Pattern[patternIndex])
-                    grid[gridX][gridY] = false;
-            }
+            var x = startX + dx;
+            var y = startY + dy;
+
+            if (x >= gridWidth || y >= gridHeight)
+                return false; // out of bounds
+
+            if (filledCells.Contains((x, y)))
+                return false; // overlap
+        }
+        return true;
+    }
+
+    private void PlaceShape(HashSet<(int x, int y)> filledCells, Shape shape, int startX, int startY)
+    {
+        foreach (var (dx, dy) in shape.FilledCells)
+        {
+            filledCells.Add((startX + dx, startY + dy));
+        }
+    }
+
+    private void RemoveShape(HashSet<(int x, int y)> filledCells, Shape shape, int startX, int startY)
+    {
+        foreach (var (dx, dy) in shape.FilledCells)
+        {
+            filledCells.Remove((startX + dx, startY + dy));
         }
     }
 
@@ -124,41 +192,7 @@ public class Solution1
 
     public class Shape
     {
-        public BitArray Pattern { get; set; } = new(9);
-
-        public bool Fits(BitArray[] grid, int startX, int startY)
-        {
-            var gridWidth = grid.Length;
-            var gridHeight = grid[0].Length;
-
-            // check if pattern doesn't overlap with filled cells
-            for (var r = 0; r < patternHeight; r++)
-            for (var c = 0; c < patternWidth; c++)
-            {
-                var gridX = startX + c;
-                var gridY = startY + r;
-                if (gridX >= gridWidth || gridY >= gridHeight)
-                    return false; // out of bounds
-
-                var patternIndex = r * patternWidth + c;
-                if (grid[gridX][gridY] && Pattern[patternIndex])
-                    return false;
-            }
-
-            return true;
-        }
-
-        public void Place(BitArray[] grid, int startX, int startY)
-        {
-            for (var r = 0; r < patternHeight; r++)
-            for (var c = 0; c < patternWidth; c++)
-            {
-                var gridX = startX + c;
-                var gridY = startY + r;
-                var patternIndex = r * patternWidth + c;
-                if (Pattern[patternIndex]) grid[gridX][gridY] = true;
-            }
-        }
+        public List<(int dx, int dy)> FilledCells { get; set; } = new();
     }
 
     #endregion
@@ -215,43 +249,43 @@ public class Solution1
             var rows = patternLines.Count;
             var cols = patternLines[0].Length;
 
-            var shape = new BitArray[rows];
-            for (var col = 0; col < cols; col++) shape[col] = new BitArray(rows);
-
+            var cells = new List<(int x, int y)>();
             for (var r = 0; r < rows; r++)
             for (var c = 0; c < cols; c++)
-                shape[c][r] = patternLines[r][c] == '#';
+                if (patternLines[r][c] == '#')
+                    cells.Add((c, r));
 
             patternGroup.Index = index++;
-            patternGroup.ShapeOrientations = RotateOrFlipShape(shape);
+            patternGroup.ShapeOrientations = RotateOrFlipShape(cells);
             patterns.Add(patternGroup);
         }
 
         return patterns;
     }
 
-    private List<Shape> RotateOrFlipShape(BitArray[] shape)
+    private List<Shape> RotateOrFlipShape(List<(int x, int y)> cells)
     {
         var orientations = new List<Shape>();
 
-        orientations.AddRange(GetAllRotations(shape));
-        shape = FlipShapeHorizontally(shape);
-        orientations.AddRange(GetAllRotations(shape));
-        shape = FlipShapeVertically(shape);
-        orientations.AddRange(GetAllRotations(shape));
+        orientations.AddRange(GetAllRotations(cells));
+        cells = FlipShapeHorizontally(cells);
+        orientations.AddRange(GetAllRotations(cells));
+        cells = FlipShapeVertically(cells);
+        orientations.AddRange(GetAllRotations(cells));
         orientations = RemoveDuplicateShapes(orientations);
 
         return orientations;
     }
 
-    // remove duplicate shapes that have the same Pattern meaning the bitArray inside has the same bits set
+    // remove duplicate shapes that have the same filled cells
     private List<Shape> RemoveDuplicateShapes(List<Shape> orientations)
     {
         var uniqueShapes = new List<Shape>();
         var seenPatterns = new HashSet<string>();
         foreach (var shape in orientations)
         {
-            var patternKey = string.Join(",", shape.Pattern.Cast<bool>().Select(b => b ? "1" : "0"));
+            var sortedCells = shape.FilledCells.OrderBy(c => c.dx).ThenBy(c => c.dy).ToList();
+            var patternKey = string.Join(",", sortedCells.Select(c => $"{c.dx}:{c.dy}"));
             if (!seenPatterns.Contains(patternKey))
             {
                 seenPatterns.Add(patternKey);
@@ -262,73 +296,40 @@ public class Solution1
         return uniqueShapes;
     }
 
-    private BitArray[] FlipShapeVertically(BitArray[] shape)
+    private List<(int x, int y)> FlipShapeVertically(List<(int x, int y)> cells)
     {
-        var rows = shape[0].Length;
-        var cols = shape.Length;
-        var flipped = new BitArray[cols];
-        for (var c = 0; c < cols; c++)
-        {
-            flipped[c] = new BitArray(rows);
-            for (var r = 0; r < rows; r++) flipped[c][r] = shape[c][rows - r - 1];
-        }
-
-        return flipped;
+        var maxY = cells.Max(c => c.y);
+        return cells.Select(c => (c.x, maxY - c.y)).ToList();
     }
 
-    private BitArray[] FlipShapeHorizontally(BitArray[] shape)
+    private List<(int x, int y)> FlipShapeHorizontally(List<(int x, int y)> cells)
     {
-        var rows = shape[0].Length;
-        var cols = shape.Length;
-        var flipped = new BitArray[cols];
-        for (var c = 0; c < cols; c++)
-        {
-            flipped[c] = new BitArray(rows);
-            for (var r = 0; r < rows; r++) flipped[c][r] = shape[cols - c - 1][r];
-        }
-
-        return flipped;
+        var maxX = cells.Max(c => c.x);
+        return cells.Select(c => (maxX - c.x, c.y)).ToList();
     }
 
-    private IEnumerable<Shape> GetAllRotations(BitArray[] shape)
+    private IEnumerable<Shape> GetAllRotations(List<(int x, int y)> cells)
     {
         var orientations = new List<Shape>();
-        var currentShape = shape;
-        for (var i = 0; i < 5; i++)
+        var currentCells = cells;
+        for (var i = 0; i < 4; i++)
         {
-            var newShape = new Shape();
-            newShape.Pattern = FlattenShape(currentShape);
-            orientations.Add(newShape);
-            currentShape = RotateShape90Degrees(currentShape);
+            var shape = new Shape();
+            // Normalize so the minimum x and y are both 0
+            var minX = currentCells.Min(c => c.x);
+            var minY = currentCells.Min(c => c.y);
+            shape.FilledCells = currentCells.Select(c => (c.x - minX, c.y - minY)).ToList();
+            orientations.Add(shape);
+            currentCells = RotateShape90Degrees(currentCells);
         }
 
         return orientations;
     }
 
-    private BitArray[] RotateShape90Degrees(BitArray[] currentShape)
+    private List<(int x, int y)> RotateShape90Degrees(List<(int x, int y)> cells)
     {
-        var rows = currentShape[0].Length;
-        var cols = currentShape.Length;
-        var rotated = new BitArray[rows];
-        for (var r = 0; r < rows; r++)
-        {
-            rotated[r] = new BitArray(cols);
-            for (var c = 0; c < cols; c++) rotated[r][c] = currentShape[cols - c - 1][r];
-        }
-
-        return rotated;
-    }
-
-    private BitArray FlattenShape(BitArray[] currentShape)
-    {
-        var rows = currentShape[0].Length;
-        var cols = currentShape.Length;
-        var flat = new BitArray(rows * cols);
-        for (var r = 0; r < rows; r++)
-        for (var c = 0; c < cols; c++)
-            flat[r * cols + c] = currentShape[c][r];
-
-        return flat;
+        // Rotate 90 degrees clockwise: (x, y) -> (y, -x)
+        return cells.Select(c => (c.y, -c.x)).ToList();
     }
 
     #endregion
