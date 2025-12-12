@@ -32,24 +32,6 @@ public class Solution1
                 continue;
             }
 
-            // Calculate total filled cells needed based on actual pattern sizes
-            var totalFilledCellsNeeded = 0;
-            for (var i = 0; i < patternRequirementCount.Length; i++)
-            {
-                if (patternRequirementCount[i] > 0 && i < patterns.Count)
-                {
-                    var filledCellsInPattern = patterns[i].ShapeOrientations[0].FilledCells.Count;
-                    totalFilledCellsNeeded += patternRequirementCount[i] * filledCellsInPattern;
-                }
-            }
-
-            // If we don't have enough space for the filled cells, skip immediately
-            if (gridArea < totalFilledCellsNeeded)
-            {
-                continue;
-            }
-
-            // Use backtracking to verify the fit
             var filledCells = new HashSet<(int x, int y)>();
             result += FitPatternsToGrid(filledCells, width, height, patterns, patternRequirementCount) ? 1 : 0;
         }
@@ -100,12 +82,10 @@ public class Solution1
 
         if (filledCells.Count == 0)
         {
-            // Empty grid - only try top-left corner
             positionsToTry.Add((0, 0));
         }
         else
         {
-            // Try positions adjacent to filled cells (including diagonals)
             foreach (var (fx, fy) in filledCells)
             {
                 for (var dy = -1; dy <= 1; dy++)
@@ -123,20 +103,16 @@ public class Solution1
             }
         }
 
-        // Try placing this pattern at candidate positions
         foreach (var (x, y) in positionsToTry)
         {
-            // Try all orientations of this pattern
             foreach (var shape in patternGroup.ShapeOrientations)
             {
                 if (!CanPlaceShape(filledCells, shape, x, y, gridWidth, gridHeight))
                     continue;
 
-                // Place the pattern
                 PlaceShape(filledCells, shape, x, y);
                 patternRequirementCount[patternIndex]--;
 
-                // Recursively try to place remaining patterns
                 if (FitPatternsToGrid(filledCells, gridWidth, gridHeight, patterns, patternRequirementCount))
                     return true;
 
@@ -277,7 +253,6 @@ public class Solution1
         return orientations;
     }
 
-    // remove duplicate shapes that have the same filled cells
     private List<Shape> RemoveDuplicateShapes(List<Shape> orientations)
     {
         var uniqueShapes = new List<Shape>();
